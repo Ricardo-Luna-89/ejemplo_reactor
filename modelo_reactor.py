@@ -96,7 +96,7 @@ t2,x2 = RK4(reactor_tubular,0, x0, h, n, u_opt)
 for i in range(len(x0)): # tamaño de las variables del modelo
     plt.subplot(1,2,i+1)
     plt.plot(time,X[:,i])
-    plt.plot(t1,x1[:,i],'--')
-    plt.plot(t2,x2[:,i],':')
+    plt.plot(t1,x1[:,i],'--', color = 'blue')
+    plt.plot(t2,x2[:,i],':', color = 'red')
 # %%
 plt.step(u_opt)
