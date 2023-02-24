@@ -97,6 +97,6 @@ for i in range(len(x0)): # tamaño de las variables del modelo
     plt.subplot(1,2,i+1)
     plt.plot(time,X[:,i])
     plt.plot(t1,x1[:,i],'--')
-    plt.plot(t2,x2[:,i],'--')
+    plt.plot(t2,x2[:,i],':')
 # %%
 plt.step(u_opt)
