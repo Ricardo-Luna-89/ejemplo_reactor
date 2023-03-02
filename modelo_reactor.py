@@ -9,8 +9,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from scipy.optimize import Bounds, minimize
-
-# %% model
+# %% modelo reactor tubular
 def reactor_tubular(t,x,u):
     
     dxdt = np.zeros(len(x))
@@ -19,7 +18,6 @@ def reactor_tubular(t,x,u):
     dxdt[1] = u*x[0]
     
     return dxdt
-
 # %% my custom RK4
 def RK4(f,t0,x0,h,n,u):
     
@@ -37,15 +35,6 @@ def RK4(f,t0,x0,h,n,u):
         t[k+1] = t[k]+h  
         
     return t,x
-# %% funcion de costo de la optimización
-def optimizacion_reactor(u,tf,n,x0):
-    
-    h = tf/n    
-    t,x = RK4(reactor_tubular, t0=0,x0=x0,h=h,n=n,u=u)
-    # x1 = x[:,0]
-    x2 = x[:,1]
-    objetive = -x2[-1]
-    return objetive
 # %% euler
 def euler(f,t0,x0,h,n,u):
     t = np.zeros(n+1)
@@ -58,19 +47,27 @@ def euler(f,t0,x0,h,n,u):
         t[k+1] = t[k]+h
         
     return t,x
+# %% funcion de costo de la optimización
+def optimizacion_reactor(u,tf,n,x0):
+    
+    h = tf/n    
+    t,x = RK4(reactor_tubular, t0=0,x0=x0,h=h,n=n,u=u)
+    # x1 = x[:,0]
+    x2 = x[:,1]
+    objetive = -x2[-1]
+    return objetive
 # %% condiciones iniciales del modelo e inputs
 x0 = np.array([1.0, 0.0])
 tf = 1.0
 u =2.0 # escalar fijo
 tspan = (0,tf)
 # %% inputs para el custom RK4
-n = 15 # número de elementos finitos
+n = 50 # número de elementos finitos
 h = tf/n # el tamaño del paso de integración
 u1 = np.ones(n+1)*u 
 # %% integración númerica (scipy)
 solution = solve_ivp(reactor_tubular, tspan, x0, method='Radau',
                      args = (u,))
-
 time = solution.t
 X = solution.y.T
 # %% integración con custom RK4
@@ -78,25 +75,36 @@ t1,x1 = RK4(reactor_tubular,0, x0, h, n, u1)
 # %% gráfico para testar nuestro custom RK4
 for i in range(len(x0)): # tamaño de las variables del modelo
     plt.subplot(1,2,i+1)
-    plt.plot(time,X[:,i])
-    plt.plot(t1,x1[:,i],'--')
-    
+    plt.plot(time,X[:,i],'--', color ='blue')
+    plt.plot(t1,x1[:,i],':', color ='red')  
+    plt.xlabel('$t(d)$')
+    plt.ylabel('$x_{'+str(i+1)+'}(t)$')
 # %% optimización
-bounds = Bounds([0]*len(u1), [5]*len(u1))
-algorithm = 'SLSQP'
-
+bounds = Bounds([0]*len(u1), [5]*len(u1)) # restriciones variable u
+algorithm = 'SLSQP' # algoritmo
+options = {'disp': True}
 result = minimize(optimizacion_reactor, u1,
                   args =(tf,n,x0), method= algorithm,
-                  bounds=bounds)
-# %%
+                  bounds=bounds, options = options)
+# %% variable de control óptima
 u_opt = result.x
 # %% simulación optima
 t2,x2 = RK4(reactor_tubular,0, x0, h, n, u_opt)
 # %% grafico simulación optima
-for i in range(len(x0)): # tamaño de las variables del modelo
-    plt.subplot(1,2,i+1)
-    plt.plot(time,X[:,i])
-    plt.plot(t1,x1[:,i],'--', color = 'blue')
-    plt.plot(t2,x2[:,i],':', color = 'red')
-# %%
-plt.step(u_opt)
+plt.subplot(2,2,1)
+plt.plot(t1,x1[:,0],'-')
+plt.plot(t2,x2[:,0],'-')
+plt.xlabel('$t(d)$')
+plt.ylabel(r'$x_{1}(t)$')
+plt.subplot(2,2,2)
+plt.plot(t1,x1[:,1],'-')
+plt.plot(t2,x2[:,1],'-')
+plt.plot(t2[-1], x2[-1,1], 'o')
+plt.xlabel('$t(d)$')
+plt.ylabel(r'$x_{2}(t)$')
+plt.subplot(2,2,(3,4))
+plt.step(t2,u_opt)
+plt.step(t1,u1)
+plt.xlabel('$t(d)$')
+plt.ylabel('$u(t)$')
+plt.legend(['flujo constante', 'flujo óptimo'])
